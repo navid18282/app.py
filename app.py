@@ -1,13 +1,13 @@
 from flask import Flask, request, jsonify
 import instaloader
-import os
 
 app = Flask(__name__)
 
-# پوشه دانلودها
-os.makedirs("downloads", exist_ok=True)
-
 L = instaloader.Instaloader()
+
+@app.route('/')
+def home():
+    return "Flask server is running!"
 
 @app.route('/download', methods=['GET'])
 def download():
@@ -15,14 +15,15 @@ def download():
     if not url:
         return jsonify({"error": "لینک اینستاگرام را وارد کنید"}), 400
 
-    shortcode = url.split("/")[-2]
-    post = instaloader.Post.from_shortcode(L.context, shortcode)
-    filename = f"downloads/{shortcode}.mp4" if post.is_video else f"downloads/{shortcode}.jpg"
-
-    # دانلود فایل
-    L.download_post(post, target="downloads")
-
-    return jsonify({"download_url": f"https://yourserver.com/{filename}"})
+    try:
+        # استخراج shortcode از لینک
+        shortcode = url.split("/")[-2]
+        post = instaloader.Post.from_shortcode(L.context, shortcode)
+        # انتخاب لینک مستقیم بر اساس نوع پست (عکس یا ویدئو)
+        media_url = post.video_url if post.is_video else post.url
+        return jsonify({"download_url": media_url})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
